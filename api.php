@@ -27,10 +27,17 @@ try {
         case 'get_current_locations':
         default:
             $stmt = $pdo->query(
-                "SELECT t.id, t.matricula, t.modelo, lt.latitud, lt.longitud, lt.ultima_actualizacion " .
-                "FROM localizacion_taxis lt " .
-                "JOIN taxis t ON lt.id_taxi = t.id " .
-                "ORDER BY lt.ultima_actualizacion DESC"
+                "SELECT 
+                    t.id, t.nombre, t.licencia, t.matricula, t.municipio,
+                    lt.latitud, lt.longitud, lt.ultima_actualizacion,
+                    (SELECT COUNT(*) FROM documents WHERE id_conductor = t.id) as num_documentos,
+                    (SELECT COUNT(*) FROM citas WHERE id_conductor = t.id) as num_citas,
+                    (SELECT COUNT(*) FROM consultas WHERE id_conductor = t.id) as num_consultas,
+                    (SELECT COUNT(*) FROM localizacion_historico WHERE id_taxi = t.id) as num_ubicaciones
+                FROM localizacion_taxis lt
+                JOIN taxis t ON lt.id_taxi = t.id
+                GROUP BY t.id, lt.latitud, lt.longitud, lt.ultima_actualizacion
+                ORDER BY t.nombre ASC"
             );
             $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode($locations);

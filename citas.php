@@ -9,28 +9,30 @@ $message_type = '';
 try {
     $pdo = db();
     
-    // Add id_conductor to citas table
+    // Main schema definition
     $pdo->exec("CREATE TABLE IF NOT EXISTS citas (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        title VARCHAR(255) NOT NULL,
         start_event DATETIME NOT NULL,
         end_event DATETIME NOT NULL,
         id_departamento INT NOT NULL,
-        id_conductor INT,
         lugar VARCHAR(255),
         usuarios TEXT,
         estado VARCHAR(50) DEFAULT 'Pendiente',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (id_departamento) REFERENCES departamentos(id) ON DELETE CASCADE,
-        FOREIGN KEY (id_conductor) REFERENCES taxis(id) ON DELETE SET NULL
+        FOREIGN KEY (id_departamento) REFERENCES departamentos(id) ON DELETE CASCADE
     )");
-    
-    // Check if id_conductor column exists and add it if not
+
+    // Add 'title' column if it doesn't exist
+    $stmt = $pdo->query("SHOW COLUMNS FROM citas LIKE 'title'");
+    if ($stmt->rowCount() == 0) {
+        $pdo->exec("ALTER TABLE citas ADD COLUMN title VARCHAR(255) NOT NULL AFTER id;");
+    }
+
+    // Add 'id_conductor' column if it doesn't exist
     $stmt = $pdo->query("SHOW COLUMNS FROM citas LIKE 'id_conductor'");
     if ($stmt->rowCount() == 0) {
         $pdo->exec("ALTER TABLE citas ADD COLUMN id_conductor INT NULL AFTER id_departamento, ADD FOREIGN KEY (id_conductor) REFERENCES taxis(id) ON DELETE SET NULL;");
     }
-
 
     // Fetch departments and conductors
     $departamentos = $pdo->query("SELECT id, nombre FROM departamentos ORDER BY nombre")->fetchAll(PDO::FETCH_ASSOC);

@@ -53,23 +53,14 @@
                     <a class="nav-link" href="drivers.php"><i class="bi bi-person-badge"></i> Conductores</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="documents.php"><i class="bi bi-file-earmark-text"></i> Documentos</a>
-                </li>
-                <li class="nav-item">
                     <a class="nav-link" href="departamentos.php"><i class="bi bi-building"></i> Departamentos</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="consultas.php"><i class="bi bi-patch-question"></i> Consultas</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="citas.php"><i class="bi bi-calendar-check"></i> Citas</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="localizacion.php"><i class="bi bi-geo-alt"></i> Localización</a>
+                    <a class="nav-link" href="localizacion.php"><i class="bi bi-geo-alt"></i> Mapa</a>
                 </li>
             </ul>
         </div>
     </div>
 </nav>
 
-<main class="container mt-4">
+<main>
