@@ -64,24 +64,29 @@ try {
     $taxis_stmt = $pdo->query("SELECT id, matricula, modelo FROM taxis ORDER BY matricula");
     $taxis = $taxis_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Fetch all locations
-    $stmt = $pdo->query("SELECT lt.id, t.matricula, t.modelo, lt.latitud, lt.longitud, lt.ultima_actualizacion 
-                           FROM localizacion_taxis lt
-                           JOIN taxis t ON lt.id_taxi = t.id
-                           ORDER BY lt.ultima_actualizacion DESC");
-    $localizaciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
 } catch (PDOException $e) {
     die("Error de base de datos: " . $e->getMessage());
 }
 ?>
 
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+
 <div class="container-fluid px-4">
-    <h1 class="mt-4">Localización de Taxis</h1>
+    <h1 class="mt-4">Localización de Taxis en Tiempo Real</h1>
     <ol class="breadcrumb mb-4">
         <li class="breadcrumb-item"><a href="index.php">Dashboard</a></li>
         <li class="breadcrumb-item active">Localización</li>
     </ol>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-map-marked-alt me-1"></i>
+            Mapa de Taxis
+        </div>
+        <div class="card-body">
+            <div id="map" style="height: 500px;"></div>
+        </div>
+    </div>
 
     <div class="row">
         <div class="col-xl-6">
@@ -150,47 +155,61 @@ try {
             </div>
         </div>
     </div>
-
-    <div class="card mb-4">
-        <div class="card-header">
-            <i class="fas fa-map-marker-alt me-1"></i>
-            Últimas Localizaciones Registradas
-        </div>
-        <div class="card-body">
-            <table id="datatablesSimple" class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Taxi</th>
-                        <th>Latitud</th>
-                        <th>Longitud</th>
-                        <th>Última Actualización</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (!empty($localizaciones)):
-                        foreach ($localizaciones as $localizacion):
-                    ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($localizacion['id']); ?></td>
-                                <td><?php echo htmlspecialchars($localizacion['matricula'] . ' (' . $localizacion['modelo'] . ')'); ?></td>
-                                <td><?php echo htmlspecialchars($localizacion['latitud']); ?></td>
-                                <td><?php echo htmlspecialchars($localizacion['longitud']); ?></td>
-                                <td><?php echo htmlspecialchars($localizacion['ultima_actualizacion']); ?></td>
-                            </tr>
-                    <?php 
-                        endforeach;
-                    else: 
-                    ?>
-                        <tr>
-                            <td colspan="5" class="text-center">No hay localizaciones registradas.</td>
-                        </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
 </div>
+
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Coordenadas iniciales para centrar el mapa (ej. Madrid)
+        const initialCoords = [40.416775, -3.703790];
+        const map = L.map('map').setView(initialCoords, 12);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        let markers = {};
+
+        function updateMap() {
+            fetch('api.php')
+                .then(response => response.json())
+                .then(data => {
+                    // Limpiar marcadores que ya no existen
+                    Object.keys(markers).forEach(matricula => {
+                        if (!data.find(taxi => taxi.matricula === matricula)) {
+                            map.removeLayer(markers[matricula]);
+                            delete markers[matricula];
+                        }
+                    });
+
+                    data.forEach(taxi => {
+                        const lat = parseFloat(taxi.latitud);
+                        const lon = parseFloat(taxi.longitud);
+                        const matricula = taxi.matricula;
+
+                        if (!isNaN(lat) && !isNaN(lon)) {
+                            const popupContent = `<b>Taxi:</b> ${matricula}<br><b>Modelo:</b> ${taxi.modelo || 'N/A'}<br><b>Última vez:</b> ${taxi.ultima_actualizacion}`;
+
+                            if (markers[matricula]) {
+                                markers[matricula].setLatLng([lat, lon]).setPopupContent(popupContent);
+                            } else {
+                                markers[matricula] = L.marker([lat, lon]).addTo(map)
+                                    .bindPopup(popupContent);
+                            }
+                        }
+                    });
+                })
+                .catch(error => console.error('Error al cargar las localizaciones:', error));
+        }
+
+        // Actualizar el mapa cada 5 segundos
+        setInterval(updateMap, 5000);
+
+        // Carga inicial
+        updateMap();
+    });
+</script>
 
 <?php
 require_once 'footer.php';
