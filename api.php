@@ -27,7 +27,7 @@ try {
         case 'get_current_locations':
         default:
             $stmt = $pdo->query(
-                "SELECT t.matricula, t.modelo, lt.latitud, lt.longitud, lt.ultima_actualizacion " .
+                "SELECT t.id, t.matricula, t.modelo, lt.latitud, lt.longitud, lt.ultima_actualizacion " .
                 "FROM localizacion_taxis lt " .
                 "JOIN taxis t ON lt.id_taxi = t.id " .
                 "ORDER BY lt.ultima_actualizacion DESC"

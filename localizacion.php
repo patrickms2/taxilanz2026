@@ -43,30 +43,21 @@ try {
         }
     }
 
-    // Handle form submission
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_localizacion'])) {
+    // Handle form submission for historical location
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_localizacion_historica'])) {
         $id_taxi = $_POST['id_taxi'];
         $latitud = $_POST['latitud'];
         $longitud = $_POST['longitud'];
+        $fecha_registro = $_POST['fecha_registro'];
 
-        if (!empty($id_taxi) && is_numeric($latitud) && is_numeric($longitud)) {
-            $pdo->beginTransaction();
+        if (!empty($id_taxi) && is_numeric($latitud) && is_numeric($longitud) && !empty($fecha_registro)) {
             try {
-                // Upsert (Update or Insert) the last known location
-                $stmt_upsert = $pdo->prepare(
-                    "INSERT INTO localizacion_taxis (id_taxi, latitud, longitud) VALUES (?, ?, ?) " .
-                    "ON DUPLICATE KEY UPDATE latitud = VALUES(latitud), longitud = VALUES(longitud)"
-                );
-                $stmt_upsert->execute([$id_taxi, $latitud, $longitud]);
-
-                // Insert into history
-                $stmt_history = $pdo->prepare("INSERT INTO localizacion_historico (id_taxi, latitud, longitud) VALUES (?, ?, ?)");
-                $stmt_history->execute([$id_taxi, $latitud, $longitud]);
+                // Insert into history with specific timestamp
+                $stmt_history = $pdo->prepare("INSERT INTO localizacion_historico (id_taxi, latitud, longitud, fecha_registro) VALUES (?, ?, ?, ?)");
+                $stmt_history->execute([$id_taxi, $latitud, $longitud, $fecha_registro]);
                 
-                $pdo->commit();
-                echo '<div class="alert alert-success" role="alert">Localización actualizada con éxito.</div>';
+                echo '<div class="alert alert-success" role="alert">Ubicación histórica añadida con éxito.</div>';
             } catch (Exception $e) {
-                $pdo->rollBack();
                 echo '<div class="alert alert-danger" role="alert">Error al guardar los datos: '. $e->getMessage() .'</div>';
             }
         } else {
@@ -136,11 +127,12 @@ try {
         <div class="col-xl-6">
             <div class="card mb-4">
                 <div class="card-header">
-                    <i class="fas fa-taxi me-1"></i>
-                    Añadir o Actualizar Localización
+                    <i class="fas fa-plus me-1"></i>
+                    Añadir Ubicación Histórica
                 </div>
                 <div class="card-body">
                     <form action="localizacion.php" method="POST">
+                        <p class="small text-muted">Haz clic en un taxi del mapa para rellenar los datos o haz clic en el mapa para obtener coordenadas.</p>
                         <div class="form-floating mb-3">
                             <select class="form-select" id="selectTaxi" name="id_taxi" required>
                                 <option value="">Seleccione un taxi</option>
@@ -164,9 +156,13 @@ try {
                                 </div>
                             </div>
                         </div>
+                        <div class="form-floating mb-3">
+                            <input class="form-control" id="inputFecha" type="datetime-local" name="fecha_registro" required />
+                            <label for="inputFecha">Fecha y Hora</label>
+                        </div>
                         <div class="mt-4 mb-0">
                             <div class="d-grid">
-                                <button type="submit" name="add_localizacion" class="btn btn-primary btn-block">Actualizar Localización</button>
+                                <button type="submit" name="add_localizacion_historica" class="btn btn-primary btn-block">Añadir a Historial</button>
                             </div>
                         </div>
                     </form>
@@ -241,18 +237,31 @@ try {
                         const lat = parseFloat(taxi.latitud);
                         const lon = parseFloat(taxi.longitud);
                         const matricula = taxi.matricula;
+                        const taxiId = taxi.id; // Asegúrate de que la API devuelve el ID del taxi
 
                         if (!isNaN(lat) && !isNaN(lon)) {
                             const popupContent = `<b>Taxi:</b> ${matricula}<br><b>Modelo:</b> ${taxi.modelo || 'N/A'}<br><b>Última vez:</b> ${taxi.ultima_actualizacion}`;
                             const latLng = [lat, lon];
 
+                            let marker;
                             if (markers[matricula]) {
-                                markers[matricula].setLatLng(latLng).setPopupContent(popupContent);
+                                marker = markers[matricula].setLatLng(latLng).setPopupContent(popupContent);
                             } else {
-                                markers[matricula] = L.marker(latLng, { icon: taxiIcon }).addTo(map)
+                                marker = L.marker(latLng, { icon: taxiIcon }).addTo(map)
                                     .bindPopup(popupContent);
+                                markers[matricula] = marker;
                             }
-                            // Extender los límites para el auto-zoom
+
+                            marker.off('click').on('click', () => {
+                                document.getElementById('selectTaxi').value = taxiId;
+                                document.getElementById('inputLatitud').value = lat.toFixed(8);
+                                document.getElementById('inputLongitud').value = lon.toFixed(8);
+                                document.getElementById('inputFecha').value = new Date().toISOString().slice(0, 16);
+                                
+                                // Scroll to the form for better UX
+                                document.getElementById('selectTaxi').focus();
+                            });
+
                             bounds.extend(latLng);
                         }
                     });
@@ -270,6 +279,15 @@ try {
 
         // Carga inicial
         updateMap();
+
+        // Set current date and time for the historical form
+        document.getElementById('inputFecha').value = new Date().toISOString().slice(0, 16);
+
+        // Get coordinates on map click
+        map.on('click', function(e) {
+            document.getElementById('inputLatitud').value = e.latlng.lat.toFixed(8);
+            document.getElementById('inputLongitud').value = e.latlng.lng.toFixed(8);
+        });
 
         // Lógica para el historial de rutas
         let routePolyline = null;
