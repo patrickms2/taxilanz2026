@@ -58,7 +58,7 @@ try {
             (SELECT COUNT(*) FROM documents WHERE id_conductor = t.id) as num_documentos,
             (SELECT COUNT(*) FROM citas WHERE id_conductor = t.id) as num_citas,
             (SELECT COUNT(*) FROM consultas WHERE id_conductor = t.id) as num_consultas,
-            (SELECT COUNT(*) FROM taxi_locations WHERE taxi_id = t.id) as num_ubicaciones
+            (SELECT COUNT(*) FROM localizacion_historico WHERE id_taxi = t.id) as num_ubicaciones
         FROM taxis t
         GROUP BY t.id
         ORDER BY t.nombre ASC")->fetchAll(PDO::FETCH_ASSOC);

@@ -55,12 +55,18 @@ try {
         $estado = $_POST['estado'];
 
         if (!empty($title) && !empty($fecha) && !empty($hora_inicio) && !empty($hora_fin) && !empty($id_departamento)) {
-            $start_event = $fecha . ' ' . $hora_inicio;
-            $end_event = $fecha . ' ' . $hora_fin;
-            
-            $stmt = $pdo->prepare("INSERT INTO citas (title, start_event, end_event, id_departamento, id_conductor, lugar, usuarios, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$title, $start_event, $end_event, $id_departamento, $id_conductor, $lugar, $usuarios, $estado]);
-            $message = '<div class="alert alert-success">Cita añadida con éxito.</div>';
+            try {
+                $start_event_dt = new DateTime($fecha . ' ' . $hora_inicio);
+                $end_event_dt = new DateTime($fecha . ' ' . $hora_fin);
+                $start_event = $start_event_dt->format('Y-m-d H:i:s');
+                $end_event = $end_event_dt->format('Y-m-d H:i:s');
+
+                $stmt = $pdo->prepare("INSERT INTO citas (title, start_event, end_event, id_departamento, id_conductor, lugar, usuarios, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$title, $start_event, $end_event, $id_departamento, $id_conductor, $lugar, $usuarios, $estado]);
+                $message = '<div class="alert alert-success">Cita añadida con éxito.</div>';
+            } catch (Exception $e) {
+                $message = '<div class="alert alert-danger">Formato de fecha u hora inválido.</div>';
+            }
         } else {
             $message = '<div class="alert alert-danger">Título, fecha, horas y departamento son obligatorios.</div>';
         }

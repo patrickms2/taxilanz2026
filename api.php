@@ -29,14 +29,13 @@ try {
             $stmt = $pdo->query(
                 "SELECT 
                     t.id, t.nombre, t.licencia, t.matricula, t.municipio,
-                    lt.latitud, lt.longitud, lt.ultima_actualizacion,
+                    t.ultima_localizacion_lat as latitud, t.ultima_localizacion_lng as longitud,
                     (SELECT COUNT(*) FROM documents WHERE id_conductor = t.id) as num_documentos,
                     (SELECT COUNT(*) FROM citas WHERE id_conductor = t.id) as num_citas,
                     (SELECT COUNT(*) FROM consultas WHERE id_conductor = t.id) as num_consultas,
                     (SELECT COUNT(*) FROM localizacion_historico WHERE id_taxi = t.id) as num_ubicaciones
-                FROM localizacion_taxis lt
-                JOIN taxis t ON lt.id_taxi = t.id
-                GROUP BY t.id, lt.latitud, lt.longitud, lt.ultima_actualizacion
+                FROM taxis t
+                GROUP BY t.id
                 ORDER BY t.nombre ASC"
             );
             $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
